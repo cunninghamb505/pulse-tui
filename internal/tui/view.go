@@ -77,6 +77,19 @@ func (m Model) procRows() int {
 	if m.height < 6 {
 		return 3
 	}
+	topRowH, midRowH, gpuRowH := m.panelHeights()
+	fixed := 1 + topRowH + midRowH + gpuRowH + 1 // header + rows + footer
+	rows := m.height - fixed - 4                  // proc chrome: 2 border + title + column header
+	if rows < 3 {
+		rows = 3
+	}
+	return rows
+}
+
+// panelHeights analytically computes the rendered heights of the top row
+// (CPU/MEMORY), mid row (NETWORK/DISK), and GPU row, mirroring the body
+// renderers so layout math stays in one place.
+func (m Model) panelHeights() (topRowH, midRowH, gpuRowH int) {
 	width := m.width - 2
 	if width < 30 {
 		width = 30
@@ -116,7 +129,7 @@ func (m Model) procRows() int {
 	if memLines > topBody {
 		topBody = memLines
 	}
-	topRowH := topBody + 3 // title + 2 border
+	topRowH = topBody + 3 // title + 2 border
 
 	diskLines := 1 + 1 // io line + "no disks"
 	if n := len(m.stats.Disks); n > 0 {
@@ -126,19 +139,20 @@ func (m Model) procRows() int {
 	if diskLines > midBody {
 		midBody = diskLines
 	}
-	midRowH := midBody + 3
+	midRowH = midBody + 3
 
-	gpuRowH := 0
 	if n := len(m.stats.GPUs); n > 0 {
 		gpuRowH = 2*n + 3 // (name + bar) per GPU, + title + 2 border
 	}
+	return topRowH, midRowH, gpuRowH
+}
 
-	fixed := 1 + topRowH + midRowH + gpuRowH + 1 // header + rows + footer
-	rows := m.height - fixed - 4                 // proc chrome: 2 border + title + column header
-	if rows < 3 {
-		rows = 3
-	}
-	return rows
+// procListTopY is the terminal row (0-indexed) of the first process row,
+// used to map mouse clicks to processes.
+func (m Model) procListTopY() int {
+	topRowH, midRowH, gpuRowH := m.panelHeights()
+	// header + panels above + (proc panel: top border + title + column header)
+	return 1 + topRowH + midRowH + gpuRowH + 3
 }
 
 // panel wraps body in a titled rounded box of the given total width.
@@ -205,19 +219,20 @@ func (m Model) renderCPUBody(inner int) string {
 		valueStyle.Render(fmt.Sprintf("%5.1f%%", m.stats.CPUPercent))))
 
 	if m.stats.CPUModel != "" || m.stats.HasTemp {
-		left := truncate(m.stats.CPUModel, inner-8)
-		line := labelStyle.Render(left)
 		if m.stats.HasTemp {
 			temp := fmt.Sprintf("%.0f°C", m.stats.CPUTemp)
 			styled := lipgloss.NewStyle().Foreground(gradAt((m.stats.CPUTemp - 30) / 70)).
 				Bold(true).Render(temp)
-			pad := inner - lipgloss.Width(left) - lipgloss.Width(temp)
+			tempW := lipgloss.Width(styled)
+			left := truncate(m.stats.CPUModel, inner-tempW-3)
+			pad := inner - lipgloss.Width(left) - tempW - 2
 			if pad < 1 {
 				pad = 1
 			}
-			line += strings.Repeat(" ", pad) + styled
+			b.WriteString(labelStyle.Render(left) + strings.Repeat(" ", pad) + styled + "\n")
+		} else {
+			b.WriteString(labelStyle.Render(truncate(m.stats.CPUModel, inner-2)) + "\n")
 		}
-		b.WriteString(line + "\n")
 	}
 	b.WriteString(sparkline(m.cpuHist, 100) + "\n\n")
 

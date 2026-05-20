@@ -145,6 +145,32 @@ func TestConnectionsOverlay(t *testing.T) {
 	}
 }
 
+func TestMouseSelectAndScroll(t *testing.T) {
+	m := newReadyModel() // 3 procs, cursor 0 (chrome.exe)
+
+	// procListTopY must line up with the actual rendered first process row.
+	lines := strings.Split(m.View(), "\n")
+	top := m.procListTopY()
+	if top >= len(lines) || !strings.Contains(lines[top], "chrome.exe") {
+		got := "<oob>"
+		if top < len(lines) {
+			got = lines[top]
+		}
+		t.Fatalf("procListTopY=%d should point at chrome.exe row, got %q", top, got)
+	}
+
+	var tm tea.Model = m
+	tm, _ = tm.Update(tea.MouseMsg{Action: tea.MouseActionPress, Button: tea.MouseButtonWheelDown})
+	if tm.(Model).cursor != 1 {
+		t.Errorf("wheel down should move cursor to 1, got %d", tm.(Model).cursor)
+	}
+
+	tm, _ = tm.Update(tea.MouseMsg{Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, Y: top + 2})
+	if tm.(Model).cursor != 2 {
+		t.Errorf("click on 3rd row should select index 2, got %d", tm.(Model).cursor)
+	}
+}
+
 func TestPauseAndRefresh(t *testing.T) {
 	m := newReadyModel()
 	m = send(m, " ")

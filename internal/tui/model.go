@@ -161,6 +161,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 
+	case tea.MouseMsg:
+		return m.handleMouse(msg)
+
 	case statsMsg:
 		m.stats = system.Stats(msg)
 		m.ready = true
@@ -348,6 +351,50 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.refresh += refreshStep
 		if m.refresh > maxRefresh {
 			m.refresh = maxRefresh
+		}
+	}
+	return m, nil
+}
+
+func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress {
+		return m, nil
+	}
+
+	if m.showConns {
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			m.connOffset--
+		case tea.MouseButtonWheelDown:
+			m.connOffset++
+		}
+		if m.connOffset < 0 {
+			m.connOffset = 0
+		}
+		if m.connOffset > len(m.conns)-1 {
+			m.connOffset = len(m.conns) - 1
+		}
+		if m.connOffset < 0 {
+			m.connOffset = 0
+		}
+		return m, nil
+	}
+	if m.showHelp || m.showDetail || m.confirmKill || m.filtering {
+		return m, nil
+	}
+
+	switch msg.Button {
+	case tea.MouseButtonWheelUp:
+		m.moveCursor(-1)
+	case tea.MouseButtonWheelDown:
+		m.moveCursor(1)
+	case tea.MouseButtonLeft:
+		row := msg.Y - m.procListTopY()
+		if row >= 0 {
+			if idx := m.procOffset + row; idx >= 0 && idx < len(m.filteredProcs()) {
+				m.cursor = idx
+				m.followCursor()
+			}
 		}
 	}
 	return m, nil
