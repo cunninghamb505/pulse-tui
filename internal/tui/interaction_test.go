@@ -130,6 +130,21 @@ func TestSortModesAndReverse(t *testing.T) {
 	}
 }
 
+func TestConnectionsOverlay(t *testing.T) {
+	m := newReadyModel()
+	m = send(m, "C")
+	if !m.showConns {
+		t.Fatal("C should open the connections overlay")
+	}
+	if !strings.Contains(m.View(), "Connections") {
+		t.Error("connections overlay should render a title")
+	}
+	m = send(m, "esc")
+	if m.showConns {
+		t.Error("esc should close the connections overlay")
+	}
+}
+
 func TestPauseAndRefresh(t *testing.T) {
 	m := newReadyModel()
 	m = send(m, " ")

@@ -24,6 +24,9 @@ func (m Model) View() string {
 	if m.showDetail {
 		return appStyle.Render(m.renderDetail(width))
 	}
+	if m.showConns {
+		return appStyle.Render(m.renderConns(width))
+	}
 
 	header := m.renderHeader(width)
 
@@ -119,7 +122,7 @@ func (m Model) procRows() int {
 	if n := len(m.stats.Disks); n > 0 {
 		diskLines = 1 + 2*n // io line + per-disk
 	}
-	midBody := 3 // network rows
+	midBody := 4 // network rows (up, down, totals, conns)
 	if diskLines > midBody {
 		midBody = diskLines
 	}
@@ -302,8 +305,10 @@ func (m Model) renderNetBody(inner int) string {
 
 	totals := labelStyle.Render(fmt.Sprintf("session ▲ %s   ▼ %s",
 		humanBytes(m.stats.NetUpTotal), humanBytes(m.stats.NetDownTotal)))
+	conns := labelStyle.Render(fmt.Sprintf("%d connections", m.stats.TCPConns)) +
+		footerStyle.Render("  (C)")
 
-	return up + "\n" + down + "\n" + totals
+	return up + "\n" + down + "\n" + totals + "\n" + conns
 }
 
 func (m Model) renderDiskBody(inner int) string {
@@ -560,6 +565,62 @@ func (m Model) renderDetail(width int) string {
 	return lipgloss.Place(width, h, lipgloss.Center, lipgloss.Center, box)
 }
 
+func (m Model) renderConns(width int) string {
+	inner := width - 6
+	if inner > 100 {
+		inner = 100
+	}
+	if inner < 30 {
+		inner = 30
+	}
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render(fmt.Sprintf(" Connections (%d) ", len(m.conns))) + "\n\n")
+
+	if m.connsErr != nil {
+		b.WriteString(lipgloss.NewStyle().Foreground(colRed).Width(inner).
+			Render("could not read connections: " + m.connsErr.Error()))
+	} else if len(m.conns) == 0 {
+		b.WriteString(labelStyle.Render("no established connections"))
+	} else {
+		procW, statW := 18, 12
+		addrW := (inner - procW - statW - 2) / 2
+		if addrW < 8 {
+			addrW = 8
+		}
+		b.WriteString(procHeaderStyle.Render(fmt.Sprintf("%-*s %-*s %-*s %-*s",
+			procW, "PROCESS", addrW, "LOCAL", addrW, "REMOTE", statW, "STATE")) + "\n")
+
+		rows := max(3, m.height-8) // leave room for title + chrome
+		offset := m.connOffset
+		if offset > len(m.conns)-1 {
+			offset = len(m.conns) - 1
+		}
+		if offset < 0 {
+			offset = 0
+		}
+		end := offset + rows
+		if end > len(m.conns) {
+			end = len(m.conns)
+		}
+		for _, c := range m.conns[offset:end] {
+			b.WriteString(fmt.Sprintf("%s %s %s %s\n",
+				procNameStyle.Render(fmt.Sprintf("%-*s", procW, truncate(c.Proc, procW))),
+				labelStyle.Render(fmt.Sprintf("%-*s", addrW, truncate(c.Laddr, addrW))),
+				valueStyle.Render(fmt.Sprintf("%-*s", addrW, truncate(c.Raddr, addrW))),
+				footerStyle.Render(fmt.Sprintf("%-*s", statW, c.Status))))
+		}
+	}
+	b.WriteString("\n" + subtitleStyle.Render("↑↓ scroll · esc / q to close"))
+
+	box := panelStyle.Width(inner).Render(strings.TrimRight(b.String(), "\n"))
+	h := m.height
+	if h < 1 {
+		h = lipgloss.Height(box)
+	}
+	return lipgloss.Place(width, h, lipgloss.Center, lipgloss.Center, box)
+}
+
 func (m Model) renderHelp(width int) string {
 	rows := [][2]string{
 		{"↑ / ↓", "move selection"},
@@ -569,6 +630,7 @@ func (m Model) renderHelp(width int) string {
 		{"c / m / n / p", "sort by CPU / mem / name / PID"},
 		{"r", "reverse sort order"},
 		{"k", "kill selected process"},
+		{"C", "network connections"},
 		{"/", "filter by name"},
 		{"esc", "clear filter / close"},
 		{"space", "pause / resume"},

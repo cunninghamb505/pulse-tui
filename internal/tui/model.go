@@ -103,6 +103,11 @@ type Model struct {
 	detail     system.ProcDetail
 	detailErr  error
 
+	showConns  bool
+	conns      []system.ConnInfo
+	connsErr   error
+	connOffset int
+
 	cpuHist  []float64
 	memHist  []float64
 	upHist   []float64
@@ -167,6 +172,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.detail = d
 			}
 		}
+		if m.showConns {
+			if cs, err := system.Connections(); err == nil {
+				m.conns = cs
+			}
+		}
 		return m, scheduleTick(m.refresh)
 
 	case tickMsg:
@@ -190,6 +200,31 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch key {
 		case "esc", "enter", "q":
 			m.showDetail = false
+		}
+		return m, nil
+	}
+
+	if m.showConns {
+		switch key {
+		case "esc", "q", "C":
+			m.showConns = false
+		case "up", "k":
+			m.connOffset--
+		case "down", "j":
+			m.connOffset++
+		case "pgup":
+			m.connOffset -= 10
+		case "pgdown":
+			m.connOffset += 10
+		}
+		if m.connOffset < 0 {
+			m.connOffset = 0
+		}
+		if m.connOffset > len(m.conns)-1 {
+			m.connOffset = len(m.conns) - 1
+		}
+		if m.connOffset < 0 {
+			m.connOffset = 0
 		}
 		return m, nil
 	}
@@ -269,6 +304,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.detail, m.detailErr = system.ProcessDetail(m.detailPID)
 			m.showDetail = true
 		}
+	case "C":
+		m.conns, m.connsErr = system.Connections()
+		m.connOffset = 0
+		m.showConns = true
 	case "up":
 		m.moveCursor(-1)
 	case "down":

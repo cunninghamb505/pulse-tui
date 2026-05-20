@@ -2,6 +2,7 @@
 package system
 
 import (
+	"fmt"
 	"os/exec"
 	"runtime"
 	"sort"
@@ -39,6 +40,8 @@ type Stats struct {
 
 	DiskReadRate  float64 // bytes/sec read across all devices
 	DiskWriteRate float64 // bytes/sec written across all devices
+
+	TCPConns int // count of established TCP connections
 
 	CPUTemp float64 // Celsius
 	HasTemp bool
@@ -144,6 +147,64 @@ type ProcInfo struct {
 	MemPct float32
 }
 
+// ConnInfo is one network connection for the connections overlay.
+type ConnInfo struct {
+	Laddr  string
+	Raddr  string
+	Status string
+	PID    int32
+	Proc   string
+}
+
+func collectConnCount(s *Stats) {
+	conns, err := net.Connections("tcp")
+	if err != nil {
+		return
+	}
+	for _, cn := range conns {
+		if cn.Status == "ESTABLISHED" {
+			s.TCPConns++
+		}
+	}
+}
+
+// Connections returns the established TCP connections with owning process
+// names, fetched on demand for the connections overlay.
+func Connections() ([]ConnInfo, error) {
+	conns, err := net.Connections("tcp")
+	if err != nil {
+		return nil, err
+	}
+	names := map[int32]string{}
+	out := make([]ConnInfo, 0, len(conns))
+	for _, cn := range conns {
+		if cn.Status != "ESTABLISHED" {
+			continue
+		}
+		name := names[cn.Pid]
+		if name == "" && cn.Pid > 0 {
+			if p, err := process.NewProcess(cn.Pid); err == nil {
+				name, _ = p.Name()
+				names[cn.Pid] = name
+			}
+		}
+		out = append(out, ConnInfo{
+			Laddr:  fmt.Sprintf("%s:%d", cn.Laddr.IP, cn.Laddr.Port),
+			Raddr:  fmt.Sprintf("%s:%d", cn.Raddr.IP, cn.Raddr.Port),
+			Status: cn.Status,
+			PID:    cn.Pid,
+			Proc:   name,
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Proc != out[j].Proc {
+			return out[i].Proc < out[j].Proc
+		}
+		return out[i].Raddr < out[j].Raddr
+	})
+	return out, nil
+}
+
 // GPUInfo is one GPU's stats (currently NVIDIA via nvidia-smi).
 type GPUInfo struct {
 	Name     string
@@ -226,6 +287,7 @@ func (c *Collector) Collect() Stats {
 	collectTemp(&s)
 	s.Battery = readBattery()
 	c.collectGPU(&s)
+	collectConnCount(&s)
 
 	if up, err := host.Uptime(); err == nil {
 		s.Uptime = time.Duration(up) * time.Second
