@@ -68,6 +68,60 @@ func Kill(pid int32) error {
 	return p.Kill()
 }
 
+// ProcDetail is the richer, on-demand view of a single process.
+type ProcDetail struct {
+	PID        int32
+	Name       string
+	Exe        string
+	Cmdline    string
+	Ppid       int32
+	ParentName string
+	NumThreads int32
+	Username   string
+	Status     string
+	CreateTime time.Time
+	RunTime    time.Duration
+	CPU        float64
+	MemRSS     uint64
+	MemPct     float32
+}
+
+// ProcessDetail fetches detailed information for a single PID on demand. It is
+// deliberately not collected for every process each tick (too many syscalls).
+func ProcessDetail(pid int32) (ProcDetail, error) {
+	p, err := process.NewProcess(pid)
+	if err != nil {
+		return ProcDetail{}, err
+	}
+	d := ProcDetail{PID: pid}
+	d.Name, _ = p.Name()
+	d.Exe, _ = p.Exe()
+	d.Cmdline, _ = p.Cmdline()
+	d.Ppid, _ = p.Ppid()
+	if d.Ppid > 0 {
+		if parent, err := process.NewProcess(d.Ppid); err == nil {
+			d.ParentName, _ = parent.Name()
+		}
+	}
+	d.NumThreads, _ = p.NumThreads()
+	d.Username, _ = p.Username()
+	if st, err := p.Status(); err == nil {
+		d.Status = strings.Join(st, ",")
+	}
+	if ms, err := p.CreateTime(); err == nil && ms > 0 {
+		d.CreateTime = time.UnixMilli(ms)
+		d.RunTime = time.Since(d.CreateTime)
+	}
+	if cp, err := p.CPUPercent(); err == nil {
+		d.CPU = cp
+	}
+	if mi, err := p.MemoryInfo(); err == nil && mi != nil {
+		d.MemRSS = mi.RSS
+	}
+	d.MemPct, _ = p.MemoryPercent()
+	return d, nil
+}
+
 // DiskInfo is usage for one mounted filesystem.
 type DiskInfo struct {
 	Mount   string

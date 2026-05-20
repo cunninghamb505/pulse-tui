@@ -25,13 +25,47 @@ type sortMode int
 const (
 	sortCPU sortMode = iota
 	sortMem
+	sortName
+	sortPID
 )
 
 func (s sortMode) String() string {
-	if s == sortMem {
+	switch s {
+	case sortMem:
 		return "MEM"
+	case sortName:
+		return "NAME"
+	case sortPID:
+		return "PID"
+	default:
+		return "CPU"
 	}
-	return "CPU"
+}
+
+func sortFromString(s string) sortMode {
+	switch s {
+	case "mem":
+		return sortMem
+	case "name":
+		return sortName
+	case "pid":
+		return sortPID
+	default:
+		return sortCPU
+	}
+}
+
+func (s sortMode) configString() string {
+	switch s {
+	case sortMem:
+		return "mem"
+	case sortName:
+		return "name"
+	case sortPID:
+		return "pid"
+	default:
+		return "cpu"
+	}
 }
 
 type statsMsg system.Stats
@@ -47,6 +81,7 @@ type Model struct {
 	height int
 
 	sort       sortMode
+	reverse    bool
 	cursor     int // index into the filtered process list
 	procOffset int // top of the visible process window
 	theme      int
@@ -62,6 +97,11 @@ type Model struct {
 	statusMsg   string
 
 	showHelp bool
+
+	showDetail bool
+	detailPID  int32
+	detail     system.ProcDetail
+	detailErr  error
 
 	cpuHist  []float64
 	memHist  []float64
@@ -85,9 +125,8 @@ func New() Model {
 	}
 	m.refresh = r
 
-	if cfg.Sort == "mem" {
-		m.sort = sortMem
-	}
+	m.sort = sortFromString(cfg.Sort)
+	m.reverse = cfg.Reverse
 	return m
 }
 
@@ -123,6 +162,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.sortProcs()
 		m.clampCursor()
 		m.pushHistory()
+		if m.showDetail {
+			if d, err := system.ProcessDetail(m.detailPID); err == nil {
+				m.detail = d
+			}
+		}
 		return m, scheduleTick(m.refresh)
 
 	case tickMsg:
@@ -140,6 +184,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key == "ctrl+c" {
 		m.saveConfig()
 		return m, tea.Quit
+	}
+
+	if m.showDetail {
+		switch key {
+		case "esc", "enter", "q":
+			m.showDetail = false
+		}
+		return m, nil
 	}
 
 	if m.showHelp {
@@ -201,6 +253,22 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "m":
 		m.sort = sortMem
 		m.sortProcs()
+	case "n":
+		m.sort = sortName
+		m.sortProcs()
+	case "p":
+		m.sort = sortPID
+		m.sortProcs()
+	case "r":
+		m.reverse = !m.reverse
+		m.sortProcs()
+	case "enter":
+		procs := m.filteredProcs()
+		if m.cursor >= 0 && m.cursor < len(procs) {
+			m.detailPID = procs[m.cursor].PID
+			m.detail, m.detailErr = system.ProcessDetail(m.detailPID)
+			m.showDetail = true
+		}
 	case "up":
 		m.moveCursor(-1)
 	case "down":
@@ -303,17 +371,30 @@ func (m *Model) clampCursor() {
 
 func (m *Model) sortProcs() {
 	p := m.stats.Procs
+	var less func(i, j int) bool
 	switch m.sort {
 	case sortMem:
-		sort.Slice(p, func(i, j int) bool { return p[i].MemRSS > p[j].MemRSS })
-	default:
-		sort.Slice(p, func(i, j int) bool {
+		less = func(i, j int) bool { return p[i].MemRSS > p[j].MemRSS }
+	case sortName:
+		less = func(i, j int) bool {
+			return strings.ToLower(p[i].Name) < strings.ToLower(p[j].Name)
+		}
+	case sortPID:
+		less = func(i, j int) bool { return p[i].PID < p[j].PID }
+	default: // sortCPU
+		less = func(i, j int) bool {
 			if p[i].CPU != p[j].CPU {
 				return p[i].CPU > p[j].CPU
 			}
 			return p[i].MemRSS > p[j].MemRSS
-		})
+		}
 	}
+	sort.SliceStable(p, func(i, j int) bool {
+		if m.reverse {
+			return less(j, i)
+		}
+		return less(i, j)
+	})
 }
 
 func (m *Model) pushHistory() {

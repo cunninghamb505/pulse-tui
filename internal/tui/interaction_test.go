@@ -91,6 +91,45 @@ func TestHelpToggles(t *testing.T) {
 	}
 }
 
+func TestProcessDetailOpens(t *testing.T) {
+	m := newReadyModel()
+	m = send(m, "enter")
+	if !m.showDetail {
+		t.Fatal("enter should open the detail overlay")
+	}
+	if !strings.Contains(m.View(), "to close") {
+		t.Error("detail overlay should render")
+	}
+	m = send(m, "esc")
+	if m.showDetail {
+		t.Error("esc should close the detail overlay")
+	}
+}
+
+func TestSortModesAndReverse(t *testing.T) {
+	m := newReadyModel()
+	m = send(m, "p")
+	if m.sort != sortPID {
+		t.Fatalf("p should set sort=PID, got %v", m.sort)
+	}
+	if !strings.Contains(m.View(), "PID↓") {
+		t.Error("active PID column should show ↓")
+	}
+	m = send(m, "r")
+	if !m.reverse {
+		t.Error("r should toggle reverse")
+	}
+	if !strings.Contains(m.View(), "PID↑") {
+		t.Error("reversed sort should show ↑")
+	}
+
+	m = newReadyModel()
+	m = send(m, "n")
+	if got := m.filteredProcs()[0].Name; got != "chrome.exe" {
+		t.Errorf("name sort: first should be chrome.exe, got %q", got)
+	}
+}
+
 func TestPauseAndRefresh(t *testing.T) {
 	m := newReadyModel()
 	m = send(m, " ")

@@ -12,6 +12,7 @@ type config struct {
 	Theme     int    `json:"theme"`
 	RefreshMs int    `json:"refresh_ms"`
 	Sort      string `json:"sort"`
+	Reverse   bool   `json:"reverse"`
 }
 
 func configPath() (string, error) {
@@ -50,14 +51,11 @@ func (m Model) saveConfig() {
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return
 	}
-	sortStr := "cpu"
-	if m.sort == sortMem {
-		sortStr = "mem"
-	}
 	c := config{
 		Theme:     m.theme,
 		RefreshMs: int(m.refresh / time.Millisecond),
-		Sort:      sortStr,
+		Sort:      m.sort.configString(),
+		Reverse:   m.reverse,
 	}
 	if data, err := json.MarshalIndent(c, "", "  "); err == nil {
 		_ = os.WriteFile(p, data, 0o644)

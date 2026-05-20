@@ -21,6 +21,9 @@ func (m Model) View() string {
 	if m.showHelp {
 		return appStyle.Render(m.renderHelp(width))
 	}
+	if m.showDetail {
+		return appStyle.Render(m.renderDetail(width))
+	}
 
 	header := m.renderHeader(width)
 
@@ -352,14 +355,23 @@ func (m Model) renderProcPanel(totalWidth, visible int) string {
 		end = total
 	}
 
-	cpuHdr, memHdr := "CPU%", "MEM"
-	if m.sort == sortCPU {
-		cpuHdr = "CPU%↓"
-	} else {
-		memHdr = "MEM↓"
+	arrow := "↓"
+	if m.reverse {
+		arrow = "↑"
+	}
+	pidHdr, cpuHdr, memHdr, nameHdr := "PID", "CPU%", "MEM", "NAME"
+	switch m.sort {
+	case sortPID:
+		pidHdr += arrow
+	case sortCPU:
+		cpuHdr += arrow
+	case sortMem:
+		memHdr += arrow
+	case sortName:
+		nameHdr += arrow
 	}
 	colHeader := procHeaderStyle.Render(fmt.Sprintf("%-*s%-*s %*s %*s  %-*s",
-		prefixW, "", pidW, "PID", cpuW, cpuHdr, memW, memHdr, nameW, "NAME"))
+		prefixW, "", pidW, pidHdr, cpuW, cpuHdr, memW, memHdr, nameW, nameHdr))
 
 	cursorStyle := lipgloss.NewStyle().Foreground(colBG).Background(colCyan).Bold(true).Width(inner)
 
@@ -416,9 +428,9 @@ func (m Model) renderFooter(width int) string {
 	default:
 		keys := []struct{ k, d string }{
 			{"↑↓", "select"},
+			{"enter", "info"},
 			{"k", "kill"},
 			{"/", "filter"},
-			{"space", "pause"},
 			{"?", "help"},
 			{"q", "quit"},
 		}
@@ -445,15 +457,76 @@ func (m Model) renderFooter(width int) string {
 	return left + strings.Repeat(" ", pad) + right
 }
 
+func (m Model) renderDetail(width int) string {
+	inner := width - 6
+	if inner > 88 {
+		inner = 88
+	}
+	if inner < 24 {
+		inner = 24
+	}
+	labelW := 12
+	valW := inner - labelW
+	if valW < 8 {
+		valW = 8
+	}
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render(" "+truncate(m.detail.Name, inner-4)+" ") + "\n\n")
+
+	if m.detailErr != nil {
+		b.WriteString(lipgloss.NewStyle().Foreground(colRed).Width(inner).
+			Render("could not read process: " + m.detailErr.Error()))
+	} else {
+		d := m.detail
+		started := "—"
+		if !d.CreateTime.IsZero() {
+			started = d.CreateTime.Format("2006-01-02 15:04:05")
+		}
+		rows := [][2]string{
+			{"PID", fmt.Sprintf("%d", d.PID)},
+			{"Parent", strings.TrimSpace(fmt.Sprintf("%d %s", d.Ppid, d.ParentName))},
+			{"User", d.Username},
+			{"Status", d.Status},
+			{"Threads", fmt.Sprintf("%d", d.NumThreads)},
+			{"CPU", fmt.Sprintf("%.1f%%", d.CPU)},
+			{"Memory", fmt.Sprintf("%s (%.1f%%)", humanBytes(d.MemRSS), d.MemPct)},
+			{"Started", started},
+			{"Run time", humanDuration(d.RunTime)},
+			{"Exe", d.Exe},
+			{"Command", d.Cmdline},
+		}
+		lbl := keyStyle.Width(labelW)
+		val := valueStyle.Width(valW)
+		for _, r := range rows {
+			v := r[1]
+			if strings.TrimSpace(v) == "" {
+				v = "—"
+			}
+			b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, lbl.Render(r[0]), val.Render(v)) + "\n")
+		}
+	}
+	b.WriteString("\n" + subtitleStyle.Render("esc / enter to close"))
+
+	box := panelStyle.Width(inner).Render(strings.TrimRight(b.String(), "\n"))
+	h := m.height
+	if h < 1 {
+		h = lipgloss.Height(box)
+	}
+	return lipgloss.Place(width, h, lipgloss.Center, lipgloss.Center, box)
+}
+
 func (m Model) renderHelp(width int) string {
 	rows := [][2]string{
 		{"↑ / ↓", "move selection"},
 		{"PgUp / PgDn", "jump 10 rows"},
 		{"g / G", "jump to top / bottom"},
-		{"c / m", "sort by CPU / memory"},
+		{"enter", "process details"},
+		{"c / m / n / p", "sort by CPU / mem / name / PID"},
+		{"r", "reverse sort order"},
 		{"k", "kill selected process"},
 		{"/", "filter by name"},
-		{"esc", "clear filter"},
+		{"esc", "clear filter / close"},
 		{"space", "pause / resume"},
 		{"+ / -", "faster / slower refresh"},
 		{"t / T", "next / previous theme"},
