@@ -5,22 +5,7 @@ bars, sparklines, and switchable color themes. Built with
 [Bubble Tea](https://github.com/charmbracelet/bubbletea) and
 [gopsutil](https://github.com/shirou/gopsutil).
 
-```
- ◢ PULSE ◤   hostname · Windows 11 Pro · up 2d 3h     BAT ↑87%   397 procs
-╭─ CPU ───────────────────────╮ ╭─ MEMORY ──────────────────────╮
-│ ███████████░░░░░░░░  37.4%   │ │ RAM  ████████████░░░  56.2%    │
-│ AMD Ryzen … 3.20GHz   61°C   │ │ SWAP ██████░░░░░░░░░  25.0%    │
-│ ▁▂▃▅▇▆▄▃  per-core bars…     │ │ ▂▃▄▅▄▃                         │
-╰──────────────────────────────╯ ╰───────────────────────────────╯
-╭─ NETWORK ───────────────────╮ ╭─ DISK ────────────────────────╮
-│ ▲ UP 121 KB/s  ▁▂▃          │ │ R 2.4 MB/s   W 512 KB/s        │
-│ ▼ DN 5.3 MB/s  ▃▅▇          │ │ C: ████████░░░░  40.8%         │
-╰──────────────────────────────╯ ╰───────────────────────────────╯
-╭─ PROCESSES · sort CPU · 1-12/397 ────────────────────────────────╮
-│ ▶ 1234   23.5   800 MiB  chrome.exe                              │
-│   …                                                              │
-╰──────────────────────────────────────────────────────────────────╯
-```
+![pulse running in a terminal](docs/screenshot.png)
 
 ## Features
 
@@ -30,7 +15,7 @@ bars, sparklines, and switchable color themes. Built with
 - **CPU temperature** and **battery** when the platform reports them.
 - Interactive process list: **sort** by CPU/memory, **scroll** with a cursor,
   **filter** by name, and **kill** a process.
-- **5 switchable color themes** (`t`) — Synthwave, Vapor, Matrix, Inferno, Aurora.
+- **5 switchable color themes** (`t`) — Teal (default), Vapor, Matrix, Inferno, Aurora.
 - Adjustable refresh rate, pause, and an in-app help overlay.
 - Preferences (theme, refresh, sort) persist between runs.
 
