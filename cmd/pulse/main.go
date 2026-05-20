@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/brand/pulse/internal/tui"
+	"github.com/cunninghamb505/pulse-tui/internal/tui"
 )
 
 // version is overridable at build time: -ldflags "-X main.version=1.2.3".

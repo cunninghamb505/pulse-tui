@@ -26,10 +26,10 @@ type Theme struct {
 // themes is the cycle the 't' key walks through.
 var themes = []Theme{
 	{
-		Name: "Synthwave", BG: "#160d27", Dim: "#9b93d6", Text: "#fdf7ff",
-		Pink: "#ff1cd4", Cyan: "#23f0ff", Purple: "#c64dff",
-		Yellow: "#ffe93b", Green: "#1fff8f", Red: "#ff2b5e",
-		Grad: []string{"#23f0ff", "#1fff8f", "#ffe93b", "#ff7a18", "#ff1cd4"},
+		Name: "Teal", BG: "#0c1c24", Dim: "#7fa6b8", Text: "#eafcff",
+		Pink: "#ff5fbf", Cyan: "#22f5e6", Purple: "#1fc8d6",
+		Yellow: "#ffe93b", Green: "#1fff8f", Red: "#ff5577",
+		Grad: []string{"#22f5e6", "#1fff8f", "#ffe93b", "#ff9f1c", "#ff5577"},
 	},
 	{
 		Name: "Vapor", BG: "#0d1b2a", Dim: "#7fb3d5", Text: "#f4faff",

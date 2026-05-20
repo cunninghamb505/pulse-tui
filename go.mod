@@ -1,4 +1,4 @@
-module github.com/brand/pulse
+module github.com/cunninghamb505/pulse-tui
 
 go 1.24.2
 

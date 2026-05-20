@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/brand/pulse/internal/system"
+	"github.com/cunninghamb505/pulse-tui/internal/system"
 )
 
 func fakeStats() system.Stats {

@@ -36,10 +36,29 @@ bars, sparklines, and switchable color themes. Built with
 
 ## Install
 
-Requires Go 1.21+.
+### Prebuilt binaries
+
+Download the binary for your platform from the
+[latest release](https://github.com/cunninghamb505/pulse-tui/releases/latest),
+then put it somewhere on your `PATH` (rename it to `pulse` if you like).
+
+On Windows (PowerShell):
+
+```powershell
+# after downloading pulse-windows-amd64.exe
+Move-Item .\pulse-windows-amd64.exe "$env:USERPROFILE\bin\pulse.exe"
+```
+
+On macOS / Linux:
 
 ```sh
-go install github.com/brand/pulse@latest
+chmod +x pulse-* && sudo mv pulse-* /usr/local/bin/pulse
+```
+
+### With Go (1.21+)
+
+```sh
+go install github.com/cunninghamb505/pulse-tui/cmd/pulse@latest
 ```
 
 This drops the `pulse` binary in your `GOBIN` (usually `$(go env GOPATH)/bin`).
@@ -52,8 +71,8 @@ pulse
 ### Build from source
 
 ```sh
-git clone <repo-url> pulse && cd pulse
-go build -o pulse .
+git clone https://github.com/cunninghamb505/pulse-tui && cd pulse-tui
+go build -o pulse ./cmd/pulse
 ./pulse
 ```
 
