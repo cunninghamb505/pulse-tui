@@ -1,0 +1,72 @@
+version: 2
+
+project_name: pulse
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: pulse
+    main: ./cmd/pulse
+    binary: pulse
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    name_template: "pulse_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+
+nfpms:
+  - id: linux-packages
+    package_name: pulse
+    vendor: Brandon C.
+    homepage: https://github.com/cunninghamb505/pulse-tui
+    maintainer: Brandon C. <cunninghamb505@gmail.com>
+    description: A modern, jazzy terminal system monitor (htop-style).
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+
+checksum:
+  name_template: "checksums.txt"
+
+brews:
+  - name: pulse
+    repository:
+      owner: cunninghamb505
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/cunninghamb505/pulse-tui
+    description: A modern, jazzy terminal system monitor (htop-style).
+    license: MIT
+    install: |
+      bin.install "pulse"
+    test: |
+      system "#{bin}/pulse", "--version"
+
+release:
+  github:
+    owner: cunninghamb505
+    name: pulse-tui
+
+changelog:
+  use: github
+  sort: asc

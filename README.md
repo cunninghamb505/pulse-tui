@@ -24,24 +24,42 @@ bars, sparklines, and switchable color themes. Built with
 
 ## Install
 
-### Prebuilt binaries
+### Homebrew (macOS / Linux)
 
-Download the binary for your platform from the
-[latest release](https://github.com/cunninghamb505/pulse-tui/releases/latest),
-then put it somewhere on your `PATH` (rename it to `pulse` if you like).
+```sh
+brew install cunninghamb505/tap/pulse
+```
+
+Homebrew installs the binary without the macOS "unidentified developer"
+warning (formula installs aren't quarantined).
+
+### Linux packages
+
+Grab the `.deb` or `.rpm` for your architecture from the
+[latest release](https://github.com/cunninghamb505/pulse-tui/releases/latest):
+
+```sh
+sudo dpkg -i pulse_*_linux_amd64.deb      # Debian / Ubuntu
+sudo rpm -i  pulse_*_linux_amd64.rpm      # Fedora / RHEL
+```
+
+### Prebuilt archives
+
+Download the `.tar.gz` (Linux/macOS) or `.zip` (Windows) for your platform from
+the [latest release](https://github.com/cunninghamb505/pulse-tui/releases/latest),
+extract, and put `pulse` on your `PATH`.
 
 On Windows (PowerShell):
 
 ```powershell
-# after downloading pulse-windows-amd64.exe
-Move-Item .\pulse-windows-amd64.exe "$env:USERPROFILE\bin\pulse.exe"
+Expand-Archive .\pulse_*_windows_amd64.zip -DestinationPath .
+Move-Item .\pulse.exe "$env:USERPROFILE\bin\pulse.exe"
 ```
 
-On macOS / Linux:
-
-```sh
-chmod +x pulse-* && sudo mv pulse-* /usr/local/bin/pulse
-```
+> **macOS Gatekeeper:** if you download a raw archive (not via Homebrew), macOS
+> may say the binary is from an unidentified developer. Clear the quarantine
+> flag with `xattr -dr com.apple.quarantine ./pulse`, or right-click → Open
+> once. (Removing the warning entirely requires Apple code-signing/notarization.)
 
 ### With Go (1.21+)
 
