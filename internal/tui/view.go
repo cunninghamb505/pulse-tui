@@ -56,7 +56,13 @@ func (m Model) View() string {
 	footer := m.renderFooter(width)
 	procPanel := m.renderProcPanel(width, m.procRows())
 
-	view := lipgloss.JoinVertical(lipgloss.Left, header, topRow, midRow, procPanel, footer)
+	sections := []string{header, topRow, midRow}
+	if len(m.stats.GPUs) > 0 {
+		sections = append(sections, panel("◤ GPU", width, 0, m.renderGPUBody(width-4)))
+	}
+	sections = append(sections, procPanel, footer)
+
+	view := lipgloss.JoinVertical(lipgloss.Left, sections...)
 	return appStyle.Render(view)
 }
 
@@ -119,8 +125,13 @@ func (m Model) procRows() int {
 	}
 	midRowH := midBody + 3
 
-	fixed := 1 + topRowH + midRowH + 1 // header + rows + footer
-	rows := m.height - fixed - 4       // proc chrome: 2 border + title + column header
+	gpuRowH := 0
+	if n := len(m.stats.GPUs); n > 0 {
+		gpuRowH = 2*n + 3 // (name + bar) per GPU, + title + 2 border
+	}
+
+	fixed := 1 + topRowH + midRowH + gpuRowH + 1 // header + rows + footer
+	rows := m.height - fixed - 4                 // proc chrome: 2 border + title + column header
 	if rows < 3 {
 		rows = 3
 	}
@@ -324,6 +335,39 @@ func (m Model) renderDiskBody(inner int) string {
 			gradientBar(barW, d.Percent),
 			valueStyle.Render(fmt.Sprintf("%5.1f%%", d.Percent))))
 		if i < len(m.stats.Disks)-1 {
+			b.WriteString("\n")
+		}
+	}
+	return b.String()
+}
+
+func (m Model) renderGPUBody(inner int) string {
+	if inner < 10 {
+		inner = 10
+	}
+	var b strings.Builder
+	for i, g := range m.stats.GPUs {
+		temp := lipgloss.NewStyle().Foreground(gradAt((g.TempC - 30) / 70)).Bold(true).
+			Render(fmt.Sprintf("%.0f°C", g.TempC))
+		tempW := lipgloss.Width(temp)
+		name := truncate(g.Name, inner-tempW-3)
+		pad := inner - lipgloss.Width(name) - tempW - 2
+		if pad < 1 {
+			pad = 1
+		}
+		b.WriteString(labelStyle.Render(name) + strings.Repeat(" ", pad) + temp + "\n")
+
+		pct := fmt.Sprintf("%5.1f%%", g.UtilPct)
+		vram := fmt.Sprintf("VRAM %s / %s", humanBytes(g.MemUsed), humanBytes(g.MemTotal))
+		gpuBarW := inner - len(pct) - lipgloss.Width(vram) - 6
+		if gpuBarW < 6 {
+			gpuBarW = 6
+		}
+		b.WriteString(fmt.Sprintf("%s %s   %s",
+			gradientBar(gpuBarW, g.UtilPct),
+			valueStyle.Render(pct),
+			labelStyle.Render(vram)))
+		if i < len(m.stats.GPUs)-1 {
 			b.WriteString("\n")
 		}
 	}

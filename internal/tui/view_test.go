@@ -35,6 +35,9 @@ func fakeStats() system.Stats {
 			{Mount: "C:", FSType: "NTFS", Used: 380 << 30, Total: 931 << 30, Percent: 40.8},
 			{Mount: "D:", FSType: "NTFS", Used: 1200 << 30, Total: 1862 << 30, Percent: 64.4},
 		},
+		GPUs: []system.GPUInfo{
+			{Name: "NVIDIA GeForce RTX 4080", UtilPct: 11, MemUsed: 2964 << 20, MemTotal: 16376 << 20, TempC: 36},
+		},
 	}
 }
 
@@ -44,7 +47,7 @@ func TestViewRenders(t *testing.T) {
 	m, _ = m.Update(statsMsg(fakeStats()))
 
 	out := m.View()
-	for _, want := range []string{"PULSE", "CPU", "MEMORY", "NETWORK", "DISK", "PROCESSES", "chrome.exe", "61°C", "BAT", "87%"} {
+	for _, want := range []string{"PULSE", "CPU", "MEMORY", "NETWORK", "DISK", "GPU", "RTX 4080", "PROCESSES", "chrome.exe", "61°C", "BAT", "87%"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("rendered view missing %q", want)
 		}

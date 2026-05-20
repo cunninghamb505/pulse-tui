@@ -2,8 +2,10 @@
 package system
 
 import (
+	"os/exec"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +44,8 @@ type Stats struct {
 	HasTemp bool
 
 	Battery *BatteryInfo // nil if no battery present
+
+	GPUs []GPUInfo // empty when no NVIDIA GPU / nvidia-smi unavailable
 
 	Procs    []ProcInfo
 	NumProcs int
@@ -140,6 +144,15 @@ type ProcInfo struct {
 	MemPct float32
 }
 
+// GPUInfo is one GPU's stats (currently NVIDIA via nvidia-smi).
+type GPUInfo struct {
+	Name     string
+	UtilPct  float64
+	MemUsed  uint64
+	MemTotal uint64
+	TempC    float64
+}
+
 // Collector holds the previous snapshot's state so it can compute rates.
 type Collector struct {
 	prevNetTime   time.Time
@@ -152,6 +165,9 @@ type Collector struct {
 	prevDiskTime  time.Time
 	prevDiskRead  uint64
 	prevDiskWrite uint64
+
+	gpuChecked   bool
+	hasNvidiaSMI bool
 
 	numCores int
 	cpuModel string
@@ -209,6 +225,7 @@ func (c *Collector) Collect() Stats {
 	c.collectDiskIO(&s, now)
 	collectTemp(&s)
 	s.Battery = readBattery()
+	c.collectGPU(&s)
 
 	if up, err := host.Uptime(); err == nil {
 		s.Uptime = time.Duration(up) * time.Second
@@ -264,6 +281,45 @@ func (c *Collector) collectDiskIO(s *Stats, now time.Time) {
 	c.prevDiskTime = now
 	c.prevDiskRead = read
 	c.prevDiskWrite = write
+}
+
+// collectGPU shells out to nvidia-smi when available. The presence check runs
+// once; machines without nvidia-smi (AMD GPUs, no GPU) incur no overhead.
+func (c *Collector) collectGPU(s *Stats) {
+	if !c.gpuChecked {
+		c.gpuChecked = true
+		if _, err := exec.LookPath("nvidia-smi"); err == nil {
+			c.hasNvidiaSMI = true
+		}
+	}
+	if !c.hasNvidiaSMI {
+		return
+	}
+	out, err := exec.Command("nvidia-smi",
+		"--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu",
+		"--format=csv,noheader,nounits").Output()
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		f := strings.Split(line, ",")
+		if len(f) < 5 {
+			continue
+		}
+		const mib = 1024 * 1024
+		s.GPUs = append(s.GPUs, GPUInfo{
+			Name:     strings.TrimSpace(f[0]),
+			UtilPct:  parseFloat(f[1]),
+			MemUsed:  uint64(parseFloat(f[2])) * mib,
+			MemTotal: uint64(parseFloat(f[3])) * mib,
+			TempC:    parseFloat(f[4]),
+		})
+	}
+}
+
+func parseFloat(s string) float64 {
+	v, _ := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	return v
 }
 
 // collectTemp picks a representative CPU temperature when the platform exposes
