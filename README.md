@@ -94,14 +94,15 @@ go build -o pulse ./cmd/pulse
 
 ## Platforms
 
-| OS      | Status                                                    |
-| ------- | --------------------------------------------------------- |
-| Windows | Primary target. Battery via `GetSystemPowerStatus`.       |
-| Linux   | Builds cleanly; battery support TODO.                     |
-| macOS   | Builds cleanly; battery support TODO.                     |
+| OS      | Battery source                                  | Notes                          |
+| ------- | ----------------------------------------------- | ------------------------------ |
+| Windows | `GetSystemPowerStatus`                          | Primary / most-tested target.  |
+| Linux   | sysfs (`/sys/class/power_supply`)               | Newer — please report issues.  |
+| macOS   | `pmset -g batt`                                 | Newer — please report issues.  |
 
 CPU temperature depends on what the OS exposes and may be unavailable
-(common on Windows desktops); the UI hides it when absent.
+(common on Windows desktops and on cgo-free macOS builds); the UI hides it
+when absent. Battery is hidden on machines without one.
 
 ## Config
 

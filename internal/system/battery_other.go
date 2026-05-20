@@ -1,7 +1,6 @@
-//go:build !windows
+//go:build !windows && !linux && !darwin
 
 package system
 
-// readBattery is a stub on non-Windows platforms for now; macOS/Linux battery
-// support can be added here later.
+// readBattery is a stub on platforms without a dedicated implementation.
 func readBattery() *BatteryInfo { return nil }
