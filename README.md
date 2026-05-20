@@ -24,32 +24,50 @@ bars, sparklines, and switchable color themes. Built with
 
 ## Install
 
-### Homebrew (macOS / Linux)
+Builds are published for **amd64** (most desktops/laptops/servers) and
+**arm64** (Apple Silicon Macs, Raspberry Pi, ARM servers). Pick the file that
+matches your CPU.
+
+### Homebrew (macOS / Linux) — easiest
 
 ```sh
 brew install cunninghamb505/tap/pulse
+pulse
 ```
 
-Homebrew installs the binary without the macOS "unidentified developer"
-warning (formula installs aren't quarantined).
+This is the recommended path on macOS: Homebrew installs the binary without the
+"unidentified developer" Gatekeeper warning (formula installs aren't
+quarantined). Works with Linuxbrew too.
 
-### Linux packages
+### Linux packages (`.deb` / `.rpm`)
 
-Grab the `.deb` or `.rpm` for your architecture from the
-[latest release](https://github.com/cunninghamb505/pulse-tui/releases/latest):
+Download the package for your architecture from the
+[latest release](https://github.com/cunninghamb505/pulse-tui/releases/latest),
+then install it:
 
 ```sh
-sudo dpkg -i pulse_*_linux_amd64.deb      # Debian / Ubuntu
-sudo rpm -i  pulse_*_linux_amd64.rpm      # Fedora / RHEL
+# Debian / Ubuntu
+sudo apt install ./pulse_*_linux_amd64.deb      # or: sudo dpkg -i pulse_*_linux_amd64.deb
+
+# Fedora / RHEL / openSUSE
+sudo dnf install ./pulse_*_linux_amd64.rpm      # or: sudo rpm -i pulse_*_linux_amd64.rpm
 ```
 
-### Prebuilt archives
+### Tarball / zip (any platform)
 
 Download the `.tar.gz` (Linux/macOS) or `.zip` (Windows) for your platform from
 the [latest release](https://github.com/cunninghamb505/pulse-tui/releases/latest),
-extract, and put `pulse` on your `PATH`.
+then put `pulse` on your `PATH`.
 
-On Windows (PowerShell):
+Linux / macOS:
+
+```sh
+tar -xzf pulse_*_<os>_<arch>.tar.gz
+sudo mv pulse /usr/local/bin/
+pulse
+```
+
+Windows (PowerShell):
 
 ```powershell
 Expand-Archive .\pulse_*_windows_amd64.zip -DestinationPath .
