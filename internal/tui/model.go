@@ -119,6 +119,7 @@ func New() Model {
 	cfg := loadConfig()
 	m := Model{collector: system.NewCollector()}
 
+	registerThemes(cfg.Themes)
 	m.theme = applyTheme(cfg.Theme)
 
 	r := time.Duration(cfg.RefreshMs) * time.Millisecond

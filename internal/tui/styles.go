@@ -10,17 +10,51 @@ import (
 // Theme is a named, vibrant color palette. Grad lists gradient stops from low
 // to high utilization and drives every bar and sparkline.
 type Theme struct {
-	Name   string
-	BG     string
-	Dim    string
-	Text   string
-	Pink   string
-	Cyan   string
-	Purple string
-	Yellow string
-	Green  string
-	Red    string
-	Grad   []string
+	Name   string   `json:"name"`
+	BG     string   `json:"bg"`
+	Dim    string   `json:"dim"`
+	Text   string   `json:"text"`
+	Pink   string   `json:"pink"`
+	Cyan   string   `json:"cyan"`
+	Purple string   `json:"purple"`
+	Yellow string   `json:"yellow"`
+	Green  string   `json:"green"`
+	Red    string   `json:"red"`
+	Grad   []string `json:"grad"`
+}
+
+// registerThemes appends valid user-defined themes to the cycle. Invalid themes
+// (missing name, fewer than 2 gradient stops, or unparseable hex) are skipped.
+func registerThemes(custom []Theme) {
+	for _, t := range custom {
+		if !validTheme(t) || themeExists(t.Name) {
+			continue
+		}
+		themes = append(themes, t)
+	}
+}
+
+func themeExists(name string) bool {
+	for _, t := range themes {
+		if t.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func validTheme(t Theme) bool {
+	if strings.TrimSpace(t.Name) == "" || len(t.Grad) < 2 {
+		return false
+	}
+	colors := []string{t.BG, t.Dim, t.Text, t.Pink, t.Cyan, t.Purple, t.Yellow, t.Green, t.Red}
+	colors = append(colors, t.Grad...)
+	for _, h := range colors {
+		if _, err := colorful.Hex(h); err != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // themes is the cycle the 't' key walks through.

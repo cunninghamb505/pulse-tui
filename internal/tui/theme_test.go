@@ -30,6 +30,33 @@ func TestEachThemeHasValidColors(t *testing.T) {
 	}
 }
 
+func TestRegisterThemes(t *testing.T) {
+	before := len(themes)
+	good := Theme{
+		Name: "TestCustom", BG: "#000000", Dim: "#888888", Text: "#ffffff",
+		Pink: "#ff00ff", Cyan: "#00ffff", Purple: "#8800ff",
+		Yellow: "#ffff00", Green: "#00ff00", Red: "#ff0000",
+		Grad: []string{"#00ffff", "#ff0000"},
+	}
+	badHex := good
+	badHex.Name = "BadHex"
+	badHex.Cyan = "not-a-color"
+	badGrad := good
+	badGrad.Name = "BadGrad"
+	badGrad.Grad = []string{"#00ffff"} // too few stops
+
+	registerThemes([]Theme{good, badHex, badGrad, good}) // duplicate good ignored
+	if got := len(themes) - before; got != 1 {
+		t.Fatalf("expected exactly 1 theme registered, got %d", got)
+	}
+	if !themeExists("TestCustom") {
+		t.Error("valid custom theme should be registered")
+	}
+	if themeExists("BadHex") || themeExists("BadGrad") {
+		t.Error("invalid themes should be rejected")
+	}
+}
+
 // applyThemeByValue applies a literal theme for testing without index math.
 func applyThemeByValue(th Theme) {
 	for i, t := range themes {

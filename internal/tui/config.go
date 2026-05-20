@@ -9,10 +9,11 @@ import (
 
 // config is the persisted user preferences, written on quit.
 type config struct {
-	Theme     int    `json:"theme"`
-	RefreshMs int    `json:"refresh_ms"`
-	Sort      string `json:"sort"`
-	Reverse   bool   `json:"reverse"`
+	Theme     int     `json:"theme"`
+	RefreshMs int     `json:"refresh_ms"`
+	Sort      string  `json:"sort"`
+	Reverse   bool    `json:"reverse"`
+	Themes    []Theme `json:"themes,omitempty"` // user-defined themes
 }
 
 func configPath() (string, error) {
@@ -51,12 +52,12 @@ func (m Model) saveConfig() {
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return
 	}
-	c := config{
-		Theme:     m.theme,
-		RefreshMs: int(m.refresh / time.Millisecond),
-		Sort:      m.sort.configString(),
-		Reverse:   m.reverse,
-	}
+	// Start from the existing config so user-defined themes are preserved.
+	c := loadConfig()
+	c.Theme = m.theme
+	c.RefreshMs = int(m.refresh / time.Millisecond)
+	c.Sort = m.sort.configString()
+	c.Reverse = m.reverse
 	if data, err := json.MarshalIndent(c, "", "  "); err == nil {
 		_ = os.WriteFile(p, data, 0o644)
 	}
